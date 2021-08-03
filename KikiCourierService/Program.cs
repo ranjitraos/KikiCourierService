@@ -1,47 +1,10 @@
-﻿using System;
+﻿using KikiCourierService.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace KikiCourierService
 {
-    class Offer
-    {
-        public string Code { get; set; }
-        public float DiscountPercentage { get; set; }
-        public int MinDistance { get; set; }
-        public int MaxDistance { get; set; }
-        public int MinWeight { get; set; }
-        public int MaxWeight { get; set; }
-    }
-
-    class Package
-    {
-        public string PackageId { get; set; }
-        public int PackageWeight { get; set; }
-        public float Distance { get; set; }
-        public string OfferCode { get; set; }
-        public double? DeliveryTime { get; set; }
-    }
-
-    class Vehicle
-    {
-        public int VehicleId { get; set; }
-        public double BaseDeliveryStartTime { get; set; }
-        public bool IsAvailable { get; set; }
-        public Vehicle()
-        {
-            BaseDeliveryStartTime = 0d;
-            IsAvailable = true;
-        }
-    }
-
-    class DeliveryCost
-    {
-        public string PackageId { get; set; }
-        public float Discount { get; set; }
-        public float TotalCost { get; set; }
-    }
-
     class Program
     {
         private static readonly List<Offer> OffersList = new List<Offer>() {
