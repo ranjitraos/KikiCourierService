@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace KikiCourierService
 {
-    class Program
+    class CourierServices
     {
         private static readonly List<Offer> OffersList = new List<Offer>() {
                 new Offer
