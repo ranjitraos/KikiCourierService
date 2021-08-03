@@ -7,6 +7,9 @@ namespace KikiCourierService
 {
     class CourierServices
     {
+        /// <summary>
+        /// Defining offers list
+        /// </summary>
         private static readonly List<Offer> OffersList = new List<Offer>() {
                 new Offer
                 {
@@ -36,9 +39,10 @@ namespace KikiCourierService
                     MaxWeight = 150
                 }
             };
+
         static void Main(string[] args)
         {
-            int ContinueForMoreOperation = 0;
+            int ContinueForMoreOperation;
             do
             {
                 Console.WriteLine("Hello! Please enter option of your choice for your operation.\n 1. Calculate Delivery Cost Estimation\n 2. Calculate Delivery Time Estimation");
@@ -51,6 +55,7 @@ namespace KikiCourierService
                 int NoOfPackages = Convert.ToInt32(Console.ReadLine());
                 List<Package> packages = new List<Package>();
 
+                //Get all the packages details
                 while (NoOfPackages > 0)
                 {
                     Console.WriteLine("Enter Package PackageID, PackageWeight, Distance and OfferCode (Followed by enter key after each input)):");
@@ -94,6 +99,14 @@ namespace KikiCourierService
             } while (ContinueForMoreOperation == 1);
         }
 
+        /// <summary>
+        /// Calculate Estimated Delivery Time
+        /// </summary>
+        /// <param name="packagesList"></param>
+        /// <param name="noOfVehicles"></param>
+        /// <param name="maxSpeed"></param>
+        /// <param name="maxCarriableWeight"></param>
+        /// <returns></returns>
         static List<Package> GetDeliveryTime(List<Package> packagesList,int noOfVehicles,int maxSpeed,int maxCarriableWeight)
         {
             //Sorting packages based on weight in ascending and then by Distance in descending order so that for packages with same weight, the later package i.e. package with less distance will be given priority
@@ -114,6 +127,8 @@ namespace KikiCourierService
             while (noOfPackagesDelivered < sortedPackages.Count())
             {
                 float carryingWeight = 0;
+
+                //To get list of packages to be delivered in one one delivery cycle
                 for (int i = 0; i < sortedPackages.Count(); i++)
                 {
                     if (sortedPackages[i].DeliveryTime == null)
@@ -135,8 +150,13 @@ namespace KikiCourierService
                         }
                     }
                 }
+
+                //Sorting vehicles so that the vehicle with least consumed time will be used for the cycle
                 vehiclesList = SortVehiclesBasedOnBaseStartTime(vehiclesList);
+
                 float maxDistanceToBeCovered = 0;
+
+                //Calculate delivery time for list of packages in the cycle
                 while (front <= end)
                 {
                     if (sortedPackages[front].DeliveryTime == null)
@@ -158,11 +178,25 @@ namespace KikiCourierService
             return sortedPackages.OrderBy(p=>p.PackageId).ToList();
         }
 
+        /// <summary>
+        /// Sort Vehicles based on consumed delivery time for packages
+        /// </summary>
+        /// <param name="vehicles"></param>
+        /// <returns></returns>
         static List<Vehicle> SortVehiclesBasedOnBaseStartTime(List<Vehicle> vehicles)
         {
             return vehicles.OrderBy(v => v.BaseDeliveryStartTime).ThenBy(v => v.VehicleId).ToList();
         }
 
+        /// <summary>
+        /// Calculate Estimated Discount & Total Cost for packages based on applied offer & validating against pre-defined offers
+        /// </summary>
+        /// <param name="BaseDeliveryCost"></param>
+        /// <param name="packageId"></param>
+        /// <param name="weight"></param>
+        /// <param name="distance"></param>
+        /// <param name="offerCode"></param>
+        /// <returns></returns>
         static DeliveryCost GetDeliveryCost(int BaseDeliveryCost,string packageId,int weight,float distance,string offerCode)
         {
             float totalCost = BaseDeliveryCost + (weight * 10) + (distance * 5);
