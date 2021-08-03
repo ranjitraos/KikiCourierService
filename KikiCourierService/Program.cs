@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace KikiCourierService
 {
@@ -17,8 +18,21 @@ namespace KikiCourierService
     {
         public string PackageId { get; set; }
         public int PackageWeight { get; set; }
-        public int Distance { get; set; }
+        public float Distance { get; set; }
         public string OfferCode { get; set; }
+        public double? DeliveryTime { get; set; }
+    }
+
+    class Vehicle
+    {
+        public int VehicleId { get; set; }
+        public double BaseDeliveryStartTime { get; set; }
+        public bool IsAvailable { get; set; }
+        public Vehicle()
+        {
+            BaseDeliveryStartTime = 0d;
+            IsAvailable = true;
+        }
     }
 
     class DeliveryCost
@@ -61,36 +75,132 @@ namespace KikiCourierService
             };
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-
-            Console.WriteLine("Enter Base Delivery Cost:");
-            int BaseDeliveryCost = Convert.ToInt32(Console.ReadLine());
-
-            Console.WriteLine("Enter No of Packages to be delivered:");
-            int NoOfPackages = Convert.ToInt32(Console.ReadLine());
-            List<Package> packages = new List<Package>();
-
-            while (NoOfPackages > 0)
+            int ContinueForMoreOperation = 0;
+            do
             {
-                Console.WriteLine("Enter Package PackageID, PackageWeight, Distance and OfferCode (Followed by enter key after each input)):");
-                packages.Add(new Package
+                Console.WriteLine("Hello! Please enter option of your choice for your operation.\n 1. Calculate Delivery Cost Estimation\n 2. Calculate Delivery Time Estimation");
+                int OperationOfChoice = Convert.ToInt32(Console.ReadLine());
+
+                Console.WriteLine("Enter Base Delivery Cost:");
+                int BaseDeliveryCost = Convert.ToInt32(Console.ReadLine());
+
+                Console.WriteLine("Enter No of Packages to be delivered:");
+                int NoOfPackages = Convert.ToInt32(Console.ReadLine());
+                List<Package> packages = new List<Package>();
+
+                while (NoOfPackages > 0)
                 {
-                    PackageId = Console.ReadLine(),
-                    PackageWeight = Convert.ToInt32(Console.ReadLine()),
-                    Distance = Convert.ToInt32(Console.ReadLine()),
-                    OfferCode = Console.ReadLine()
-                });
-                NoOfPackages--;
-            }
+                    Console.WriteLine("Enter Package PackageID, PackageWeight, Distance and OfferCode (Followed by enter key after each input)):");
+                    packages.Add(new Package
+                    {
+                        PackageId = Console.ReadLine(),
+                        PackageWeight = Convert.ToInt32(Console.ReadLine()),
+                        Distance = Convert.ToInt32(Console.ReadLine()),
+                        OfferCode = Console.ReadLine()
+                    });
+                    NoOfPackages--;
+                }
 
-            foreach(Package p in packages)
-            {
-                DeliveryCost cost = GetDeliveryCost(BaseDeliveryCost, p.PackageId, p.PackageWeight, p.Distance, p.OfferCode);
-                Console.WriteLine(cost.PackageId + " " + cost.Discount + " " + cost.TotalCost);
-            }
+                if (OperationOfChoice == 1)
+                {
+                    foreach (Package p in packages)
+                    {
+                        DeliveryCost cost = GetDeliveryCost(BaseDeliveryCost, p.PackageId, p.PackageWeight, p.Distance, p.OfferCode);
+                        Console.WriteLine(cost.PackageId + " " + cost.Discount + " " + cost.TotalCost);
+                    }
+                }
+                else if (OperationOfChoice == 2)
+                {
+                    Console.WriteLine("Enter No of Vehicles available:");
+                    int NoOfVehicles = Convert.ToInt32(Console.ReadLine());
+                    Console.WriteLine("Enter Max Speed of the vehicles:");
+                    int MaxSpeed = Convert.ToInt32(Console.ReadLine());
+                    Console.WriteLine("Enter Max carriable weight for the vehicles:");
+                    int MaxCarriableWeight = Convert.ToInt32(Console.ReadLine());
+
+                    var packagesList = GetDeliveryTime(packages, NoOfVehicles, MaxSpeed, MaxCarriableWeight);
+                    foreach (var p in packagesList)
+                    {
+                        DeliveryCost cost = GetDeliveryCost(BaseDeliveryCost, p.PackageId, p.PackageWeight, p.Distance, p.OfferCode);
+                        Console.WriteLine(cost.PackageId + " " + cost.Discount + " " + cost.TotalCost + " " + p.DeliveryTime);
+                    }
+                }
+
+                Console.WriteLine("Want to perform more operations?\n 1. Yes\n 2. No");
+                ContinueForMoreOperation = Convert.ToInt32(Console.ReadLine());
+            } while (ContinueForMoreOperation == 1);
         }
 
-        static DeliveryCost GetDeliveryCost(int BaseDeliveryCost,string packageId,int weight,int distance,string offerCode)
+        static List<Package> GetDeliveryTime(List<Package> packagesList,int noOfVehicles,int maxSpeed,int maxCarriableWeight)
+        {
+            //Sorting packages based on weight in ascending and then by Distance in descending order so that for packages with same weight, the later package i.e. package with less distance will be given priority
+            var sortedPackages = packagesList.OrderBy(p => p.PackageWeight).ThenByDescending(p => p.Distance).ToList();
+
+            var vehiclesList = new List<Vehicle>();
+            int index = 1;
+            while (index <= noOfVehicles)
+            {
+                vehiclesList.Add(new Vehicle { VehicleId = index });
+                index++;
+            }
+
+            int noOfPackagesDelivered = 0;
+
+            int front = 0;
+            int end = front;
+            while (noOfPackagesDelivered < sortedPackages.Count())
+            {
+                float carryingWeight = 0;
+                for (int i = 0; i < sortedPackages.Count(); i++)
+                {
+                    if (sortedPackages[i].DeliveryTime == null)
+                    {
+                        if ((carryingWeight + sortedPackages[i].PackageWeight) <= maxCarriableWeight)
+                        {
+                            carryingWeight += sortedPackages[i].PackageWeight;
+                            end = i;
+                        }
+                        else if (((carryingWeight + sortedPackages[i].PackageWeight) - sortedPackages[front].PackageWeight) <= maxCarriableWeight)
+                        {
+                            carryingWeight = (carryingWeight + sortedPackages[i].PackageWeight) - sortedPackages[front].PackageWeight;
+                            end = i;
+                            while (true)
+                            {
+                                front = front + 1;
+                                if (sortedPackages[front].DeliveryTime == null) break;
+                            }
+                        }
+                    }
+                }
+                vehiclesList = SortVehiclesBasedOnBaseStartTime(vehiclesList);
+                float maxDistanceToBeCovered = 0;
+                while (front <= end)
+                {
+                    if (sortedPackages[front].DeliveryTime == null)
+                    {
+                        sortedPackages[front].DeliveryTime = Math.Round(vehiclesList[0].BaseDeliveryStartTime + (Math.Truncate(100 * (sortedPackages[front].Distance / maxSpeed)) / 100), 2);
+                        maxDistanceToBeCovered = maxDistanceToBeCovered < sortedPackages[front].Distance ? sortedPackages[front].Distance : maxDistanceToBeCovered;
+                        noOfPackagesDelivered++;
+                    }
+                    front++;
+                }
+                vehiclesList[0].BaseDeliveryStartTime = (vehiclesList[0].BaseDeliveryStartTime + ((Math.Truncate(100 * (maxDistanceToBeCovered / maxSpeed)) / 100) * 2));
+                foreach (var v in vehiclesList)
+                {
+                }
+                front = 0;
+                end = 0;
+            }
+
+            return sortedPackages.OrderBy(p=>p.PackageId).ToList();
+        }
+
+        static List<Vehicle> SortVehiclesBasedOnBaseStartTime(List<Vehicle> vehicles)
+        {
+            return vehicles.OrderBy(v => v.BaseDeliveryStartTime).ThenBy(v => v.VehicleId).ToList();
+        }
+
+        static DeliveryCost GetDeliveryCost(int BaseDeliveryCost,string packageId,int weight,float distance,string offerCode)
         {
             float totalCost = BaseDeliveryCost + (weight * 10) + (distance * 5);
             float discount = 0;
